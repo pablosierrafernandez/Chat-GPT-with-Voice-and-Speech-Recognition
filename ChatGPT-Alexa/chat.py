@@ -5,6 +5,7 @@ import pyaudio as ptg
 from imports.auth import * # * --> all
 import openai
 import pyttsx3
+import sqlite3
 ############################## CENTINELA DE INICIO
 openai.api_key=api_key
 r=sr.Recognizer()
@@ -14,6 +15,12 @@ engine=pyttsx3.init()
 engine.setProperty('voice',0)
 engine.setProperty('rate',150)
 
+miConexion=sqlite3.connect("chat.bd")
+miCursor=miConexion.cursor()
+try:
+    miCursor.execute("CREATE TABLE HISTORIAL(ID INTEGER PRIMARY KEY AUTOINCREMENT, PREGUNTA TEXT, RESPUESTA TEXT, FECHA DATETIME)")
+except:
+    pass
 try:
     while(True):
         with sr.Microphone() as source:
@@ -21,8 +28,8 @@ try:
             print("Escuchando...")
             audio=r.listen(source)
         try:
-            text=str(r.recognize_google(audio,language=language_chat, show_all=True))
-            print(text)
+            text=str(r.recognize_google(audio,language=language_chat))
+            
 
             conversation+="\Humano: "+text+"\nAI: "
             conversation=conversation.strip()
@@ -34,11 +41,18 @@ try:
             print(f"AI ({fecha}): {answer}\n")
             engine.say(answer)
             engine.runAndWait()
+            
+            miCursor.execute("INSERT INTO HISTORIAL (PREGUNTA, RESPUESTA, FECHA) VALUES(?, ?, ?)",(text,answer,datetime.datetime.fromtimestamp(response.created)))
+           
         except:
             print("No reconozco tu voz")
         
 except KeyboardInterrupt:
+    miConexion.commit()
+    miConexion.close()
     engine.say("Hasta pronto!")
     engine.runAndWait()
+    
     print("\nHasta pronto!")
+    
     
