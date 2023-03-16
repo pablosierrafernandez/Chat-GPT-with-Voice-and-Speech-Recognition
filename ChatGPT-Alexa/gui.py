@@ -4,6 +4,9 @@
 
 import datetime
 import threading
+import tkinter
+from tkinter.tix import ComboBox
+from tkinter.ttk import Combobox
 import speech_recognition as sr
 import pyaudio as ptg
 from imports.auth import * # * --> all
@@ -14,9 +17,9 @@ from pathlib import Path
 
 # from tkinter import *
 # Explicit imports to satisfy Flake8
-from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage
-
-openai.api_key=api_key
+from tkinter import BOTTOM, GROOVE, RIGHT, Frame, Label, Scrollbar, Tk, Canvas, Entry, Text, Button, PhotoImage, TkVersion, Toplevel
+key_entry=None
+lang_combo=None
 r=sr.Recognizer()
 OUTPUT_PATH = Path(__file__).parent
 ASSETS_PATH = OUTPUT_PATH / Path(r"C:\Users\ajenj\Documents\GitHub\ChatAlexa\ChatGPT-Alexa\assets\frame0")
@@ -29,6 +32,7 @@ def relative_to_assets(path: str) -> Path:
 ############################## CENTINELA DE INICIO
 def antes_chatear():
     global boton_close
+    
     if boton_close==True:
         boton_close=False
     else:
@@ -37,10 +41,16 @@ def antes_chatear():
         threading.Thread(target=chatear).start()
         print("hola2")
 def chatear():
+    global key_entry
+    global lang_combo
+    openai.api_key=key_entry.get()
     global boton_close
     conversation=""
     engine=pyttsx3.init()
-    engine.setProperty('voice',0)
+    var_voice=0
+    if lang_combo.get()=='en-Us':
+        var_voice=1
+    engine.setProperty('voice',var_voice)
     engine.setProperty('rate',150)
 
     miConexion=sqlite3.connect("chat.bd")
@@ -59,7 +69,8 @@ def chatear():
                     break
                 audio=r.listen(source)
             try:
-                text=str(r.recognize_google(audio,language=language_chat))
+                text=str(r.recognize_google(audio,language=lang_combo.get()))
+                entry_text_2.set(text)
                 conversation+="\Humano: "+text+"\nAI: "
                 conversation=conversation.strip()
                 response=openai.Completion.create(engine="text-davinci-003",prompt=conversation,temperature=0.9,max_tokens=150,top_p=1,frequency_penalty=0,presence_penalty=0.6, stop=["\n","Humano","AI"])
@@ -67,7 +78,9 @@ def chatear():
                     break
                 answer=response.choices[0].text
                 conversation+=answer
+                entry_text_1.set(answer)
                 fecha=datetime.datetime.fromtimestamp(response.created).strftime('%H:%M:%S')
+                entry_text_1_fecha.set(fecha)
                 print(f"AI ({fecha}): {answer}\n")
                 engine.say(answer)
                 engine.runAndWait()
@@ -116,18 +129,43 @@ entry_bg_1 = canvas.create_image(
     176.5,
     image=entry_image_1
 )
+entry_text_1_fecha=tkinter.StringVar()
+entry_1_fecha = Entry(
+    bd=0,
+    bg="#81c9fa",
+    fg="#000716",
+    highlightthickness=0,
+    textvariable=entry_text_1_fecha
+)
+entry_1_fecha.place(
+    x=197.0,
+    y=100.0,
+    width=80.0,
+    height=30.0
+)
+
+scrollbar = Scrollbar(orient="horizontal")
+scrollbar.pack()
+
+entry_text_1=tkinter.StringVar()
 entry_1 = Entry(
     bd=0,
     bg="#F9F9F9",
     fg="#000716",
-    highlightthickness=0
+    highlightthickness=0,
+    textvariable=entry_text_1,
+    xscrollcommand=scrollbar.set
 )
+scrollbar.config(command=entry_1.xview)
+
 entry_1.place(
     x=197.0,
     y=128.0,
     width=352.0,
     height=95.0
 )
+
+
 
 entry_image_2 = PhotoImage(
     file=relative_to_assets("entry_2.png"))
@@ -136,11 +174,13 @@ entry_bg_2 = canvas.create_image(
     367.0,
     image=entry_image_2
 )
+entry_text_2=tkinter.StringVar()
 entry_2 = Entry(
     bd=0,
     bg="#F9F9F9",
     fg="#000716",
-    highlightthickness=0
+    highlightthickness=0,
+    textvariable=entry_text_2
 )
 entry_2.place(
     x=219.0,
@@ -160,8 +200,8 @@ image_1 = canvas.create_image(
 button_image_1 = PhotoImage(
     file=relative_to_assets("button_1.png"))
 button_1 = Button(
-    image=button_image_1,
     borderwidth=0,
+    background='black',
     highlightthickness=0,
     command=antes_chatear,
     relief="flat"
@@ -195,14 +235,41 @@ button_2.place(
     width=48.0,
     height=48.0
 )
-
+def open_config():
+    global key_entry
+    global lang_combo
+    config_window=Toplevel(window)
+    config_window.title("Configuracion")
+    config_frame=Frame(config_window,relief=GROOVE)
+    config_frame.pack(padx=10,pady=10)
+    
+    key_label=Label(config_frame,text="API KEY")
+    key_label.grid(row=0,column=0, padx=10,pady=10,sticky="we")
+    key_entry=Entry(config_frame)
+    key_entry.insert(0,api_key)
+    key_entry.grid(row=0,column=1, padx=10,pady=10,sticky="we")
+    
+    lang_label=Label(config_frame,text="Idioma")
+    lang_label.grid(row=1,column=0, padx=10,pady=10,sticky="we")
+    lang_values=['es-Es','en-US']
+    lang_combo=Combobox(config_frame,values=lang_values)
+    lang_combo.current(0)
+    lang_combo.grid(row=1,column=1, padx=10,pady=10)
+    def save_config():
+        new_key=key_entry.get()
+        new_lang=lang_combo.get()
+        print(new_key,new_lang)
+    save_button=Button(config_frame,text="Guardar", command=save_config)
+    save_button.grid(row=2,column=0, padx=10,pady=10)
+    cancel_button=Button(config_frame,text="Cancelar",command=config_window.destroy)
+    cancel_button.grid(row=2,column=1, padx=10, pady=10)
 button_image_3 = PhotoImage(
     file=relative_to_assets("button_3.png"))
 button_3 = Button(
     image=button_image_3,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_3 clicked"),
+    command=open_config,
     relief="flat"
 )
 button_3.place(
@@ -211,6 +278,7 @@ button_3.place(
     width=24.0,
     height=24.0
 )
+
 
 canvas.create_text(
     230.0,
