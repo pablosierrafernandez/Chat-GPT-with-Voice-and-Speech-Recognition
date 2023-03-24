@@ -5,6 +5,7 @@
 import datetime
 import threading
 import tkinter
+from tkinter import messagebox
 from tkinter.tix import ComboBox
 from tkinter.ttk import Combobox
 import speech_recognition as sr
@@ -20,6 +21,7 @@ from pathlib import Path
 from tkinter import BOTTOM, GROOVE, RIGHT, Frame, Label, Scrollbar, Tk, Canvas, Entry, Text, Button, PhotoImage, TkVersion, Toplevel
 key_entry=None
 lang_combo=None
+new_lang="es-Es"
 r=sr.Recognizer()
 OUTPUT_PATH = Path(__file__).parent
 ASSETS_PATH = OUTPUT_PATH / Path(r"C:\Users\ajenj\Documents\GitHub\ChatAlexa\ChatGPT-Alexa\assets\frame0")
@@ -41,14 +43,14 @@ def antes_chatear():
         threading.Thread(target=chatear).start()
         print("hola2")
 def chatear():
-    global key_entry
-    global lang_combo
-    openai.api_key=key_entry.get()
+    global api_key
+    global new_lang
+    openai.api_key=api_key
     global boton_close
     conversation=""
     engine=pyttsx3.init()
     var_voice=0
-    if lang_combo.get()=='en-Us':
+    if new_lang=='en-Us':
         var_voice=1
     engine.setProperty('voice',var_voice)
     engine.setProperty('rate',150)
@@ -69,11 +71,15 @@ def chatear():
                     break
                 audio=r.listen(source)
             try:
-                text=str(r.recognize_google(audio,language=lang_combo.get()))
+                text=str(r.recognize_google(audio,language=new_lang))
                 entry_text_2.set(text)
                 conversation+="\Humano: "+text+"\nAI: "
                 conversation=conversation.strip()
-                response=openai.Completion.create(engine="text-davinci-003",prompt=conversation,temperature=0.9,max_tokens=150,top_p=1,frequency_penalty=0,presence_penalty=0.6, stop=["\n","Humano","AI"])
+                try:
+                    response=openai.Completion.create(engine="text-davinci-003",prompt=conversation,temperature=0.9,max_tokens=150,top_p=1,frequency_penalty=0,presence_penalty=0.6, stop=["\n","Humano","AI"])
+                except openai.error.AuthenticationError:
+                    messagebox.showerror(title=None, message="ERROR DE API")
+                    return 0
                 if boton_close==False:
                     break
                 answer=response.choices[0].text
@@ -84,7 +90,6 @@ def chatear():
                 print(f"AI ({fecha}): {answer}\n")
                 engine.say(answer)
                 engine.runAndWait()
-                
                 miCursor.execute("INSERT INTO HISTORIAL (PREGUNTA, RESPUESTA, FECHA) VALUES(?, ?, ?)",(text,answer,datetime.datetime.fromtimestamp(response.created)))
             
             except:
@@ -237,7 +242,7 @@ button_2.place(
 )
 def open_config():
     global key_entry
-    global lang_combo
+    global new_lang
     config_window=Toplevel(window)
     config_window.title("Configuracion")
     config_frame=Frame(config_window,relief=GROOVE)
@@ -253,12 +258,14 @@ def open_config():
     lang_label.grid(row=1,column=0, padx=10,pady=10,sticky="we")
     lang_values=['es-Es','en-US']
     lang_combo=Combobox(config_frame,values=lang_values)
-    lang_combo.current(0)
+    lang_combo.set("Seleccione un idioma")
+    #lang_combo.current(0)
     lang_combo.grid(row=1,column=1, padx=10,pady=10)
     def save_config():
-        new_key=key_entry.get()
+        global api_key
+        global new_lang
+        api_key=key_entry.get()
         new_lang=lang_combo.get()
-        print(new_key,new_lang)
     save_button=Button(config_frame,text="Guardar", command=save_config)
     save_button.grid(row=2,column=0, padx=10,pady=10)
     cancel_button=Button(config_frame,text="Cancelar",command=config_window.destroy)
