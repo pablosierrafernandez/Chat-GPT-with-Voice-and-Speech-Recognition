@@ -1,1 +1,1 @@
-api_key="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"
+api_key="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"
