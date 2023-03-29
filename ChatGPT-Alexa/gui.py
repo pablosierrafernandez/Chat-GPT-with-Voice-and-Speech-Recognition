@@ -49,9 +49,11 @@ def chatear():
     global boton_close
     conversation=""
     engine=pyttsx3.init()
-    var_voice=0
-    if new_lang=='en-Us':
-        var_voice=1
+    print(new_lang)
+    var_voice=engine.getProperty('voices')[0].id
+    if new_lang=='en-US':
+        var_voice=engine.getProperty('voices')[1].id
+        print("llego")
     engine.setProperty('voice',var_voice)
     engine.setProperty('rate',150)
 
