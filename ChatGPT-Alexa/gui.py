@@ -45,15 +45,15 @@ def antes_chatear():
 def chatear():
     global api_key
     global new_lang
+    
     openai.api_key=api_key
+   
     global boton_close
     conversation=""
     engine=pyttsx3.init()
-    print(new_lang)
-    var_voice=engine.getProperty('voices')[0].id
-    if new_lang=='en-US':
-        var_voice=engine.getProperty('voices')[1].id
-        print("llego")
+    var_voice=0
+    if new_lang=='en-Us':
+        var_voice=1
     engine.setProperty('voice',var_voice)
     engine.setProperty('rate',150)
 
@@ -67,12 +67,13 @@ def chatear():
             with sr.Microphone() as source:
                 r.adjust_for_ambient_noise(source,duration=2)
                 if boton_close==False:
-                    break
+                    return 0
                 print("Escuchando...")
                 if boton_close==False:
-                    break
+                    return 0
                 audio=r.listen(source)
-            try:
+                if boton_close==False:
+                    return 0
                 text=str(r.recognize_google(audio,language=new_lang))
                 entry_text_2.set(text)
                 conversation+="\Humano: "+text+"\nAI: "
@@ -80,10 +81,10 @@ def chatear():
                 try:
                     response=openai.Completion.create(engine="text-davinci-003",prompt=conversation,temperature=0.9,max_tokens=150,top_p=1,frequency_penalty=0,presence_penalty=0.6, stop=["\n","Humano","AI"])
                 except openai.error.AuthenticationError:
-                    messagebox.showerror(title=None, message="ERROR DE API")
+                    tkinter.messagebox.showerror(title=None, message="La API no es valida")
                     return 0
                 if boton_close==False:
-                    break
+                    return 0
                 answer=response.choices[0].text
                 conversation+=answer
                 entry_text_1.set(answer)
@@ -92,15 +93,12 @@ def chatear():
                 print(f"AI ({fecha}): {answer}\n")
                 engine.say(answer)
                 engine.runAndWait()
+                
                 miCursor.execute("INSERT INTO HISTORIAL (PREGUNTA, RESPUESTA, FECHA) VALUES(?, ?, ?)",(text,answer,datetime.datetime.fromtimestamp(response.created)))
             
-            except:
+            
                 print("No reconozco tu voz")
         
-        miConexion.commit()
-        miConexion.close()
-        engine.say("Hasta pronto!")
-        engine.runAndWait()
         
         print("\nHasta pronto!")
 window = Tk()
@@ -161,9 +159,8 @@ entry_1 = Entry(
     fg="#000716",
     highlightthickness=0,
     textvariable=entry_text_1,
-    xscrollcommand=scrollbar.set
+    
 )
-scrollbar.config(command=entry_1.xview)
 
 entry_1.place(
     x=197.0,
@@ -244,7 +241,7 @@ button_2.place(
 )
 def open_config():
     global key_entry
-    global new_lang
+    global lang_combo
     config_window=Toplevel(window)
     config_window.title("Configuracion")
     config_frame=Frame(config_window,relief=GROOVE)
@@ -260,14 +257,14 @@ def open_config():
     lang_label.grid(row=1,column=0, padx=10,pady=10,sticky="we")
     lang_values=['es-Es','en-US']
     lang_combo=Combobox(config_frame,values=lang_values)
-    lang_combo.set("Seleccione un idioma")
-    #lang_combo.current(0)
+    lang_combo.current(0)
     lang_combo.grid(row=1,column=1, padx=10,pady=10)
     def save_config():
-        global api_key
-        global new_lang
+        global api_key ## cambio
+        global new_lang ## cambio
         api_key=key_entry.get()
         new_lang=lang_combo.get()
+        print(api_key,new_lang)
     save_button=Button(config_frame,text="Guardar", command=save_config)
     save_button.grid(row=2,column=0, padx=10,pady=10)
     cancel_button=Button(config_frame,text="Cancelar",command=config_window.destroy)
