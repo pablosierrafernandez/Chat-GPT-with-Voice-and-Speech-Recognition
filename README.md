@@ -14,7 +14,7 @@
 1. Clone the repository:
 
    ```
-   git clone https://github.com/your-username/chat-gpt-voice-recognition.git
+   git clone https://github.com/pablosierrafernandez/Chat-GPT-with-Voice-and-Speech-Recognition.git
    ```
 
 2. Install the required dependencies:
